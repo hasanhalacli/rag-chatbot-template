@@ -1,0 +1,96 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rag-chatbot-template"
+version = "0.1.0"
+description = "Production-ready RAG chatbot without LangChain/LlamaIndex"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+authors = [
+    {name = "Hasan Halacli", email = "hasan@halacli.com"}
+]
+keywords = ["rag", "chatbot", "llm", "qdrant", "retrieval", "nlp"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+dependencies = [
+    "qdrant-client>=1.7.0",
+    "sentence-transformers>=2.2.0",
+    "openai>=1.0.0",
+    "anthropic>=0.18.0",
+    "httpx>=0.26.0",
+    "fastapi>=0.109.0",
+    "uvicorn[standard]>=0.25.0",
+    "pydantic>=2.5.0",
+    "pydantic-settings>=2.1.0",
+    "python-dotenv>=1.0.0",
+    "pypdf>=3.17.0",
+    "python-multipart>=0.0.6",
+    "tiktoken>=0.5.0",
+    "numpy>=1.24.0",
+    "pyyaml>=6.0",
+    "loguru>=0.7.0",
+    "tqdm>=4.66.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "mypy>=1.5.0",
+    "ruff>=0.1.0",
+]
+rerank = [
+    "sentence-transformers>=2.2.0",
+]
+all = [
+    "rag-chatbot-template[dev,rerank]",
+]
+
+[project.urls]
+Homepage = "https://github.com/hasanhalacli/rag-chatbot-template"
+Repository = "https://github.com/hasanhalacli/rag-chatbot-template"
+Issues = "https://github.com/hasanhalacli/rag-chatbot-template/issues"
+
+[project.scripts]
+rag-ingest = "scripts.ingest:main"
+rag-chat = "scripts.chat:main"
+rag-serve = "scripts.serve:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*", "scripts*"]
+
+[tool.black]
+line-length = 100
+target-version = ["py310"]
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+[tool.ruff]
+line-length = 100
+select = ["E", "F", "W", "I", "N", "UP"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
