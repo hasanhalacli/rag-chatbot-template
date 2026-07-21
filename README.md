@@ -338,4 +338,8 @@ MIT License - see [LICENSE](LICENSE)
 
 ## Author
 
-**Hasan Halacli** - [Website](https://www.halacli.com/) · [GitHub](https://github.com/hasanhalacli)
+**Hasan Halacli** — AI Solution Architect & Technical Lead
+
+[Portfolio](https://www.halacli.com/) · [Blog](https://www.halacli.com/blog.html) · [LinkedIn](https://www.linkedin.com/in/hasan-h-326b5a171/) · [GitHub](https://github.com/hasanhalacli)
+
+> 📖 Related deep-dive: [**Enterprise RAG Chatbot — Architecture, Evaluation & Delivery**](https://www.halacli.com/case-rag-chatbot.html)
