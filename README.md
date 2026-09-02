@@ -1,8 +1,8 @@
 # RAG Chatbot Template
 
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![gates](https://github.com/hasanhalacli/rag-chatbot-template/actions/workflows/gates.yml/badge.svg)](https://github.com/hasanhalacli/rag-chatbot-template/actions/workflows/gates.yml)
+[![Python 3.10–3.13](https://img.shields.io/badge/python-3.10%E2%80%933.13-blue.svg)](https://www.python.org/downloads/)
 [![Qdrant](https://img.shields.io/badge/Qdrant-vector%20DB-red.svg)](https://qdrant.tech/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-green.svg)](https://fastapi.tiangolo.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 
 Production-ready RAG (Retrieval-Augmented Generation) chatbot template. **No LangChain, no LlamaIndex** - just clean, deployment-friendly Python code.
@@ -14,8 +14,6 @@ This template is intentionally built without heavy frameworks:
 | Aspect | With Frameworks | This Template |
 |--------|-----------------|---------------|
 | Dependencies | 50+ packages | ~15 packages |
-| Docker image | 2-3 GB | < 500 MB |
-| Cold start | 10-30s | 2-5s |
 | Debugging | Abstraction layers | Direct code |
 | Customization | Override patterns | Modify directly |
 | Production | Framework updates break things | You control everything |
@@ -29,9 +27,7 @@ This template is intentionally built without heavy frameworks:
 - **Flexible Chunking**: Recursive, semantic, or sentence-based strategies
 - **Reranking**: Cross-encoder reranking for improved relevance
 - **Conversation Memory**: Configurable context window management
-- **RAG Evaluation**: Built-in faithfulness and relevance metrics
-- **FastAPI Server**: Production-ready API with health checks
-- **Docker Ready**: Multi-stage Dockerfile for minimal images
+- **Gated by default**: every dependency pinned and locked; secret scan, vulnerability audit and tests run on every pull request
 
 ## Quick Start
 
@@ -58,24 +54,37 @@ cp .env.example .env
 ### Start Qdrant
 
 ```bash
-docker-compose up -d qdrant
+docker compose up -d qdrant
 ```
 
-### Ingest Documents
+### Ingest, retrieve, answer
 
-```bash
-python scripts/ingest.py --input_dir data/documents --collection my_docs
+```python
+from rag_chatbot.core import EmbeddingModel, LLMClient
+from rag_chatbot.generation import RAGChain
+from rag_chatbot.ingestion import get_chunker
+from rag_chatbot.retrieval import Document, QdrantStore, Retriever
+
+embedder = EmbeddingModel("sentence-transformers/all-MiniLM-L6-v2")
+store = QdrantStore(host="localhost", port=6333, embedding_dim=embedder.embedding_dim)
+store.create_collection("my_docs")
+
+text = open("data/handbook.txt").read()
+chunks = get_chunker("recursive", chunk_size=512, chunk_overlap=50).chunk(text, {"source": "handbook"})
+docs = [Document(content=c.text, metadata=c.metadata) for c in chunks]
+store.add_documents("my_docs", docs, embedder.embed([d.content for d in docs]).tolist())
+
+chain = RAGChain(
+    retriever=Retriever(store, embedder, collection="my_docs", top_k=5),
+    llm_client=LLMClient(provider="openai", model="gpt-4o"),   # key from OPENAI_API_KEY
+)
+response = chain.query("What is the refund policy?", conversation_id="demo")
+print(response.answer)
+for source in response.sources:
+    print("-", source.metadata, source.score)
 ```
 
-### Chat
-
-```bash
-# CLI chat
-python scripts/chat.py --collection my_docs
-
-# Or start API server
-python scripts/serve.py
-```
+Follow-up questions on the same `conversation_id` are condensed against the history before retrieval.
 
 ## Project Structure
 
@@ -83,41 +92,24 @@ python scripts/serve.py
 rag-chatbot-template/
 ├── src/rag_chatbot/
 │   ├── core/
-│   │   ├── config.py           # Configuration management
-│   │   ├── embeddings.py       # Embedding models (HuggingFace, OpenAI)
-│   │   └── llm.py              # Multi-provider LLM wrapper
+│   │   ├── config.py           # Settings from env vars or YAML
+│   │   ├── embeddings.py       # Sentence-transformer embeddings
+│   │   └── llm.py              # OpenAI, Azure OpenAI, Anthropic, xAI behind one client
 │   ├── ingestion/
-│   │   ├── loader.py           # Document loaders (PDF, text, web)
-│   │   ├── chunker.py          # Text chunking strategies
-│   │   └── pipeline.py         # Ingestion orchestration
+│   │   └── chunker.py          # Recursive, sentence, semantic and LLM chunking
 │   ├── retrieval/
-│   │   ├── qdrant_store.py     # Qdrant vector store
-│   │   ├── retrievers.py       # Retrieval strategies
+│   │   ├── qdrant_store.py     # Qdrant collections and upserts
+│   │   ├── retrievers.py       # Vector, multi-query and hybrid retrieval
 │   │   └── reranker.py         # Cross-encoder reranking
-│   ├── generation/
-│   │   ├── rag_chain.py        # RAG pipeline
-│   │   ├── prompts.py          # Prompt templates
-│   │   └── memory.py           # Conversation memory
-│   ├── evaluation/
-│   │   └── metrics.py          # RAG evaluation metrics
-│   └── api/
-│       ├── app.py              # FastAPI application
-│       ├── routes.py           # API endpoints
-│       └── models.py           # Pydantic schemas
-├── scripts/
-│   ├── ingest.py               # Document ingestion CLI
-│   ├── chat.py                 # Interactive chat CLI
-│   └── serve.py                # API server
-├── configs/
-│   ├── config.yaml             # Main configuration
-│   └── prompts.yaml            # Prompt templates
-├── notebooks/
-│   ├── 01_ingestion.ipynb      # Ingestion walkthrough
-│   └── 02_retrieval.ipynb      # Retrieval tuning
-├── tests/
-├── Dockerfile
-├── docker-compose.yml
-└── pyproject.toml
+│   └── generation/
+│       ├── rag_chain.py        # Retrieve → (rerank) → generate, with memory
+│       ├── prompts.py          # Prompt templates
+│       └── memory.py           # Buffer, sliding-window and summary memory
+├── tests/                      # Unit tests — no model or database needed
+├── .github/workflows/gates.yml # Secret scan, pinned-deps check, audit, tests
+├── docker-compose.yml          # Local Qdrant
+├── pyproject.toml              # Exact versions only
+└── uv.lock
 ```
 
 ## LLM Providers
@@ -141,7 +133,7 @@ client = LLMClient(provider="xai", model="grok-beta")
 ## Configuration
 
 ```yaml
-# configs/config.yaml
+# config.yaml — load with Settings.from_yaml("config.yaml")
 embedding:
   model: sentence-transformers/all-MiniLM-L6-v2
   device: auto
@@ -157,7 +149,7 @@ retrieval:
   rerank: true
   rerank_model: cross-encoder/ms-marco-MiniLM-L-6-v2
 
-generation:
+llm:
   provider: openai
   model: gpt-4o
   temperature: 0.7
@@ -167,47 +159,6 @@ chunking:
   strategy: recursive
   chunk_size: 512
   chunk_overlap: 50
-```
-
-## API Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/chat` | Send message and get response |
-| POST | `/ingest` | Ingest documents |
-| GET | `/collections` | List collections |
-| DELETE | `/collections/{name}` | Delete collection |
-| GET | `/health` | Health check |
-
-### Chat Request
-
-```bash
-curl -X POST http://localhost:8000/chat \
-  -H "Content-Type: application/json" \
-  -d '{
-    "message": "What is RAG?",
-    "collection": "my_docs",
-    "conversation_id": "abc123"
-  }'
-```
-
-## Evaluation
-
-Built-in metrics for RAG quality:
-
-```python
-from rag_chatbot.evaluation import RAGEvaluator
-
-evaluator = RAGEvaluator()
-results = evaluator.evaluate(
-    questions=["What is X?", "How does Y work?"],
-    ground_truth=["X is...", "Y works by..."],
-    collection="my_docs"
-)
-
-print(f"Faithfulness: {results['faithfulness']:.2f}")
-print(f"Relevance: {results['relevance']:.2f}")
-print(f"Answer Correctness: {results['correctness']:.2f}")
 ```
 
 ## Chunking Strategies
@@ -316,19 +267,27 @@ reranked_docs = reranker.rerank(query, docs, top_k=3)
 
 ---
 
-## Docker Deployment
+## Development
 
 ```bash
-# Build
-docker build -t rag-chatbot:latest .
+uv sync --extra dev
+uv run pytest -q
+```
 
-# Run with Qdrant
-docker-compose up -d
+Every pull request runs the same four gates as CI: a full-history secret scan, a check that no
+dependency uses a version range, `uv lock --check`, and a vulnerability audit of the locked set —
+then the tests. A change lands only through a reviewed pull request. See [AGENTS.md](AGENTS.md)
+for the rules that apply to people and coding agents alike.
+
+## Running Qdrant locally
+
+```bash
+docker compose up -d qdrant
 ```
 
 ## Requirements
 
-- Python 3.10+
+- Python 3.10 – 3.13
 - Qdrant (local or cloud)
 - API key for at least one LLM provider
 
