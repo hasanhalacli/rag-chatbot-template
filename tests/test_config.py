@@ -1,4 +1,18 @@
+import os
+
+import pytest
+
 from rag_chatbot.core.config import LLMSettings, QdrantSettings, Settings
+
+PREFIXES = ("QDRANT_", "EMBEDDING_", "LLM_", "RETRIEVAL_", "CHUNKING_")
+
+
+@pytest.fixture(autouse=True)
+def _clean_env(monkeypatch):
+    """Settings read the real environment; a developer's shell must not leak into the assertions."""
+    for key in list(os.environ):
+        if key.startswith(PREFIXES):
+            monkeypatch.delenv(key, raising=False)
 
 
 def test_environment_overrides_defaults(monkeypatch):

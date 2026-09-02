@@ -53,7 +53,8 @@ class RecursiveChunker(BaseChunker):
 
         Args:
             chunk_size: Target chunk size.
-            chunk_overlap: Overlap between chunks.
+            chunk_overlap: Number of trailing words of the previous chunk repeated at the
+                start of the next one (0 disables overlap).
             separators: Separator priority list.
             length_function: Function to measure text length.
         """
@@ -65,7 +66,7 @@ class RecursiveChunker(BaseChunker):
     def chunk(self, text: str, metadata: Optional[dict] = None) -> List[Chunk]:
         """Split text recursively."""
         metadata = metadata or {}
-        chunks = self._split_text(text, self.separators)
+        chunks = self._add_overlap(self._split_text(text, self.separators))
 
         return [
             Chunk(
@@ -99,6 +100,8 @@ class RecursiveChunker(BaseChunker):
             if not current_chunk:
                 return
             chunk_text = separator.join(current_chunk)
+            if not chunk_text.strip():
+                return
             if self.length_function(chunk_text) > self.chunk_size:
                 chunks.extend(self._split_text(chunk_text, remaining_separators))
             else:
@@ -115,14 +118,12 @@ class RecursiveChunker(BaseChunker):
                 current_length = split_length
             else:
                 current_chunk.append(split)
-                current_length += split_length + len(separator)
+                current_length = projected
 
         # The trailing chunk must obey the size limit too — a single long paragraph
         # with no separators used to come back whole.
         flush()
-
-        # Add overlap
-        return self._add_overlap(chunks)
+        return chunks  # overlap is applied once, in chunk(), never per recursion level
 
     def _add_overlap(self, chunks: List[str]) -> List[str]:
         """Add overlap between chunks."""
@@ -244,7 +245,7 @@ class SemanticChunker(BaseChunker):
 
         # Split into sentences first
         sentences = text.replace("\n", " ").split(". ")
-        sentences = [s.strip().rstrip(".") + "." for s in sentences if s.strip()]
+        sentences = [s.strip() if s.strip().endswith(".") else s.strip() + "." for s in sentences if s.strip()]
 
         if len(sentences) <= 1:
             return [Chunk(text=text, start_idx=0, end_idx=len(text), metadata=metadata)]

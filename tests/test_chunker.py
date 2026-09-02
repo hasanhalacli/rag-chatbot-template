@@ -26,12 +26,28 @@ def test_recursive_chunker_loses_no_words_without_overlap():
 
 def test_recursive_chunker_overlap_repeats_tail_of_previous_chunk():
     chunks = RecursiveChunker(chunk_size=200, chunk_overlap=3).chunk(LONG_PARAGRAPH)
+    assert len(chunks) > 1
     for prev, cur in zip(chunks, chunks[1:]):
         assert cur.text.split()[:3] == prev.text.split()[-3:]
+    # overlap is applied exactly once: each chunk after the first carries precisely 3 extra words
+    assert sum(len(c.text.split()) for c in chunks) == len(LONG_PARAGRAPH.split()) + 3 * (len(chunks) - 1)
+
+
+def test_overlap_is_not_compounded_across_paragraphs():
+    text = "\n\n".join(" ".join(f"p{p}w{i}" for i in range(120)) for p in range(3))
+    chunks = RecursiveChunker(chunk_size=200, chunk_overlap=5).chunk(text)
+    assert len(chunks) > 3
+    assert sum(len(c.text.split()) for c in chunks) == len(text.split()) + 5 * (len(chunks) - 1)
+
+
+def test_trailing_newline_does_not_create_an_empty_chunk():
+    chunks = RecursiveChunker(chunk_size=50, chunk_overlap=0).chunk(LONG_PARAGRAPH[:400] + "\n")
+    assert all(c.text.strip() for c in chunks)
 
 
 def test_recursive_chunker_attaches_metadata_to_every_chunk():
     chunks = RecursiveChunker(chunk_size=200, chunk_overlap=0).chunk(LONG_PARAGRAPH, {"source": "x"})
+    assert len(chunks) > 1
     assert all(c.metadata == {"source": "x"} for c in chunks)
 
 

@@ -9,9 +9,9 @@ within five working days.
 ## What is covered
 
 The code on the `main` branch. Dependencies are pinned to exact versions and audited in CI
-on every pull request; a known advisory blocks the merge.
+on every pull request; a known advisory fails the checks.
 
 ## Secrets
 
-Never commit a `.env` file. `.env` is ignored by git and `.env.example` documents every
-variable without values. The CI pipeline scans the full history for committed credentials.
+Never commit a `.env` file. `.env` is ignored by git and `.env.example` lists the
+variables with placeholders, never real credentials. The CI pipeline scans the full history for committed credentials.

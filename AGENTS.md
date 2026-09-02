@@ -13,13 +13,13 @@ Rules for anyone — or any coding agent — changing this code.
 
 ## Secrets and data
 - Never commit `.env`, keys, tokens, or sample documents containing personal data.
-- `.env.example` documents variables without values. Keep it that way.
+- `.env.example` holds placeholders only, never a real credential. Keep it that way.
 
 ## Tests
 - A change to behaviour comes with a test that fails without the change.
 - Tests must not call a model provider or a vector database. Fake the client.
 
 ## Pull requests
-- Every change lands through a pull request, reviewed by a person.
+- Every change is opened as a pull request and read by a person before it is merged.
 - State whether an agent wrote the change and what you personally verified.
 - Read the diff in blast-radius order: dependencies, config, then code, then tests.

@@ -13,7 +13,7 @@ This template is intentionally built without heavy frameworks:
 
 | Aspect | With Frameworks | This Template |
 |--------|-----------------|---------------|
-| Dependencies | 50+ packages | ~15 packages |
+| Direct dependencies | 50+ | 9 |
 | Debugging | Abstraction layers | Direct code |
 | Customization | Override patterns | Modify directly |
 | Production | Framework updates break things | You control everything |
@@ -70,7 +70,7 @@ store = QdrantStore(host="localhost", port=6333, embedding_dim=embedder.embeddin
 store.create_collection("my_docs")
 
 text = open("data/handbook.txt").read()
-chunks = get_chunker("recursive", chunk_size=512, chunk_overlap=50).chunk(text, {"source": "handbook"})
+chunks = get_chunker("recursive", chunk_size=512, chunk_overlap=8).chunk(text, {"source": "handbook"})  # overlap = words carried over
 docs = [Document(content=c.text, metadata=c.metadata) for c in chunks]
 store.add_documents("my_docs", docs, embedder.embed([d.content for d in docs]).tolist())
 
@@ -99,7 +99,7 @@ rag-chatbot-template/
 │   │   └── chunker.py          # Recursive, sentence, semantic and LLM chunking
 │   ├── retrieval/
 │   │   ├── qdrant_store.py     # Qdrant collections and upserts
-│   │   ├── retrievers.py       # Vector, multi-query and hybrid retrieval
+│   │   ├── retrievers.py       # Vector and multi-query retrieval
 │   │   └── reranker.py         # Cross-encoder reranking
 │   └── generation/
 │       ├── rag_chain.py        # Retrieve → (rerank) → generate, with memory
@@ -121,13 +121,13 @@ from rag_chatbot.core.llm import LLMClient
 client = LLMClient(provider="openai", model="gpt-4o")
 
 # Azure OpenAI
-client = LLMClient(provider="azure", model="gpt-4o", api_version="2024-02-01")
+client = LLMClient(provider="azure", model="gpt-4o", endpoint="https://<resource>.openai.azure.com", api_version="2024-02-01")
 
 # Anthropic Claude
-client = LLMClient(provider="anthropic", model="claude-3-5-sonnet-20241022")
+client = LLMClient(provider="anthropic", model="claude-sonnet-4-6")
 
 # xAI Grok
-client = LLMClient(provider="xai", model="grok-beta")
+client = LLMClient(provider="xai", model="grok-4.6")
 ```
 
 ## Configuration
@@ -168,7 +168,7 @@ This template supports multiple chunking strategies for different document types
 | Strategy | Best For | Description |
 |----------|----------|-------------|
 | **Recursive** | General text | Splits on separators (paragraphs → sentences → words) |
-| **Sentence** | Structured docs | Preserves sentence boundaries using NLTK |
+| **Sentence** | Structured docs | Splits on sentence boundaries (NLTK if installed, else punctuation) |
 | **Semantic** | Mixed content | Splits where embedding similarity drops |
 | **LLM-based** | Complex docs | Uses LLM to identify logical boundaries |
 
@@ -176,7 +176,7 @@ This template supports multiple chunking strategies for different document types
 from rag_chatbot.ingestion import get_chunker
 
 # Recursive (default, fast)
-chunker = get_chunker("recursive", chunk_size=512, chunk_overlap=50)
+chunker = get_chunker("recursive", chunk_size=512, chunk_overlap=8)  # overlap is counted in words
 
 # Sentence-based (preserves meaning)
 chunker = get_chunker("sentence", chunk_size=512, chunk_overlap=1)
@@ -276,14 +276,8 @@ uv run pytest -q
 
 Every pull request runs the same four gates as CI: a full-history secret scan, a check that no
 dependency uses a version range, `uv lock --check`, and a vulnerability audit of the locked set —
-then the tests. A change lands only through a reviewed pull request. See [AGENTS.md](AGENTS.md)
+then the tests. Every change is opened as a pull request and read by a person before it is merged. See [AGENTS.md](AGENTS.md)
 for the rules that apply to people and coding agents alike.
-
-## Running Qdrant locally
-
-```bash
-docker compose up -d qdrant
-```
 
 ## Requirements
 

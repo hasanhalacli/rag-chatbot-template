@@ -12,5 +12,6 @@ def test_rag_prompt_carries_context_and_question():
 
 
 def test_condense_prompt_carries_history_and_question():
-    out = PromptTemplate(CONDENSE_PROMPT).format(chat_history="H", question="Q")
-    assert out.index("H") < out.index("Q")
+    out = PromptTemplate(CONDENSE_PROMPT).format(chat_history="HIST-91", question="QST-77")
+    assert out.index("HIST-91") < out.index("QST-77")
+    assert "{" not in out

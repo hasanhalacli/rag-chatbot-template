@@ -194,12 +194,12 @@ class AzureOpenAIProvider(BaseLLMProvider):
 class AnthropicProvider(BaseLLMProvider):
     """Anthropic Claude API provider."""
 
-    def __init__(self, api_key: str, model: str = "claude-3-5-sonnet-20241022"):
+    def __init__(self, api_key: str, model: str = "claude-sonnet-4-6"):
         """Initialize Anthropic provider.
 
         Args:
             api_key: Anthropic API key.
-            model: Model name (claude-3-5-sonnet, claude-3-opus, etc).
+            model: Model id (see the Anthropic models page).
         """
         from anthropic import Anthropic
 
@@ -223,11 +223,11 @@ class AnthropicProvider(BaseLLMProvider):
             else:
                 chat_messages.append({"role": m.role, "content": m.content})
 
+        # The Anthropic SDK no longer accepts a temperature argument on messages.create().
         response = self.client.messages.create(
             model=self.model,
             messages=chat_messages,
             system=system,
-            temperature=temperature,
             max_tokens=max_tokens,
             **kwargs,
         )
@@ -263,7 +263,6 @@ class AnthropicProvider(BaseLLMProvider):
             model=self.model,
             messages=chat_messages,
             system=system,
-            temperature=temperature,
             max_tokens=max_tokens,
             **kwargs,
         ) as stream:
@@ -274,12 +273,12 @@ class AnthropicProvider(BaseLLMProvider):
 class XAIProvider(BaseLLMProvider):
     """xAI Grok API provider."""
 
-    def __init__(self, api_key: str, model: str = "grok-beta"):
+    def __init__(self, api_key: str, model: str = "grok-4.6"):
         """Initialize xAI provider.
 
         Args:
             api_key: xAI API key.
-            model: Model name (grok-beta, grok-2).
+            model: Model id (see the xAI models page).
         """
         from openai import OpenAI
 
@@ -388,8 +387,8 @@ class LLMClient:
         default_models = {
             "openai": "gpt-4o",
             "azure": "gpt-4o",
-            "anthropic": "claude-3-5-sonnet-20241022",
-            "xai": "grok-beta",
+            "anthropic": "claude-sonnet-4-6",
+            "xai": "grok-4.6",
         }
         model = model or default_models[provider]
 
