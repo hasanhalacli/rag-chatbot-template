@@ -178,13 +178,14 @@ class QdrantStore:
                     )
             query_filter = models.Filter(must=must_conditions)
 
-        results = self.client.search(
+        # qdrant-client >= 1.13 replaced client.search() with query_points()
+        results = self.client.query_points(
             collection_name=collection,
-            query_vector=query_embedding,
+            query=query_embedding,
             limit=top_k,
             score_threshold=score_threshold,
             query_filter=query_filter,
-        )
+        ).points
 
         documents = []
         for hit in results:
