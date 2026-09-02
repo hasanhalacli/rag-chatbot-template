@@ -1,0 +1,38 @@
+name: gates
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # gitleaks scans the full history, not just the diff
+
+      - name: Secrets scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+
+      - name: No version ranges in dependencies
+        run: '! grep -nE "\"[A-Za-z0-9._-]+(>=|~=|\^)" pyproject.toml'
+
+      - name: Lockfile matches pyproject
+        run: uv lock --check
+
+      - name: Known-vulnerability audit
+        run: |
+          uv export --no-hashes --no-dev --no-emit-project -o /tmp/reqs.txt
+          uvx pip-audit --no-deps -r /tmp/reqs.txt
+
+      - name: Tests
+        run: |
+          uv sync --extra dev
+          uv run pytest -q
