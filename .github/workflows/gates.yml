@@ -44,6 +44,9 @@ jobs:
       - name: Known-vulnerability audit (runtime and dev)
         run: |
           uv export --no-hashes --all-extras --no-emit-project -o /tmp/reqs.txt
+          # Linux resolves torch from PyTorch's CPU index as 2.13.0+cpu; advisories are filed
+          # against the PyPI release, so audit that version.
+          sed -i -E 's/\+cpu\b//' /tmp/reqs.txt
           uvx pip-audit==2.10.1 --no-deps -r /tmp/reqs.txt
 
       - name: Tests
