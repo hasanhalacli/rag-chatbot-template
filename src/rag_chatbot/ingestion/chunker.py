@@ -94,26 +94,32 @@ class RecursiveChunker(BaseChunker):
         current_chunk = []
         current_length = 0
 
+        def flush() -> None:
+            """Emit the pending chunk, recursing on a finer separator if it is still too long."""
+            if not current_chunk:
+                return
+            chunk_text = separator.join(current_chunk)
+            if self.length_function(chunk_text) > self.chunk_size:
+                chunks.extend(self._split_text(chunk_text, remaining_separators))
+            else:
+                chunks.append(chunk_text)
+
         for split in splits:
             split_length = self.length_function(split)
+            # Joining adds a separator in front of every split but the first.
+            projected = current_length + split_length + (len(separator) if current_chunk else 0)
 
-            if current_length + split_length > self.chunk_size:
-                if current_chunk:
-                    chunk_text = separator.join(current_chunk)
-                    if self.length_function(chunk_text) > self.chunk_size:
-                        # Recursively split with next separator
-                        chunks.extend(self._split_text(chunk_text, remaining_separators))
-                    else:
-                        chunks.append(chunk_text)
-
+            if projected > self.chunk_size:
+                flush()
                 current_chunk = [split]
                 current_length = split_length
             else:
                 current_chunk.append(split)
                 current_length += split_length + len(separator)
 
-        if current_chunk:
-            chunks.append(separator.join(current_chunk))
+        # The trailing chunk must obey the size limit too — a single long paragraph
+        # with no separators used to come back whole.
+        flush()
 
         # Add overlap
         return self._add_overlap(chunks)
@@ -238,7 +244,7 @@ class SemanticChunker(BaseChunker):
 
         # Split into sentences first
         sentences = text.replace("\n", " ").split(". ")
-        sentences = [s.strip() + "." for s in sentences if s.strip()]
+        sentences = [s.strip().rstrip(".") + "." for s in sentences if s.strip()]
 
         if len(sentences) <= 1:
             return [Chunk(text=text, start_idx=0, end_idx=len(text), metadata=metadata)]
