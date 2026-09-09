@@ -45,7 +45,7 @@ dev = [
     "black==26.5.1",
     "isort==9.0.1",
     "mypy==2.3.1",
-    "ruff==0.16.5",
+    "ruff==0.16.6",
 ]
 rerank = [
     "sentence-transformers==6.0.1",
